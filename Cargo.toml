@@ -1,0 +1,8 @@
+[package]
+name = "viav"
+version = "0.1.0"
+authors = ["Brandon Dyer <BrandonDyer64@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+discord = "0.8.0"
