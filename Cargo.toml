@@ -5,4 +5,7 @@ authors = ["Brandon Dyer <BrandonDyer64@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-serenity = "0.5.14"
+serenity = "0.6.0-rc.1"
+
+[replace."openssl:0.9.37"]
+git = "https://github.com/kryptco/rust-openssl"
