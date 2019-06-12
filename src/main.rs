@@ -40,7 +40,7 @@ fn main() {
 
     // Start two shards. Note that there is an ~5 second ratelimit period
     // between when one shard can start after another.
-    if let Err(why) = client.start_shards(8) {
+    if let Err(why) = client.start_shards(1) {
         println!("Client error: {:?}", why);
     }
 }
