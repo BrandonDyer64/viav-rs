@@ -19,16 +19,16 @@ pub struct Handler;
 fn do_join(ctx: &Context, member_count: u8, channel_id: ChannelId, guild_id: GuildId) {
     if member_count > 1 { return; }
     let channel_name = filter_opt!(channel_id.name(&ctx), return);
-    guild_id.create_channel(&ctx.http, "test", ChannelType::Voice, None);
+    let channel = filter_opt_ok!(channel_id.to_channel(&ctx), return);
+    let new_channel = filter_opt_ok!(guild_id.create_channel(&ctx.http, &channel_name, ChannelType::Voice, None), return);
 }
 
 fn do_leave(ctx: &Context, member_count: u8, channel_id: ChannelId, guild_id: GuildId) {
     if member_count > 0 { return; }
     let channel = filter_opt_ok!(channel_id.to_channel(&ctx), return);
-    match channel.delete(&ctx) {
-        Ok(_) => return,
-        Err(e) => println!("{}", e)
-    };
+    if let Err(err) = channel.delete(&ctx) {
+        println!("{}", err);
+    }
 }
 
 fn do_voice(
