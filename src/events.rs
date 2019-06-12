@@ -1,35 +1,82 @@
 extern crate serenity;
 
+use::std::collections::HashMap;
+
 use serenity::{
     model::{
+        channel::ChannelType,
         gateway::Ready,
-        id::GuildId,
-        voice::VoiceState
+        id::{ ChannelId, GuildId, UserId },
+        voice::VoiceState,
     },
     prelude::*,
 };
 
+use filter_opt;
+
 pub struct Handler;
 
-fn on_join(_ctx: Context, )
+fn do_join(ctx: &Context, member_count: u8, channel_id: ChannelId, guild_id: GuildId) {
+    if member_count > 1 { return; }
+    let channel_name = filter_opt!(channel_id.name(&ctx), return);
+    guild_id.create_channel(&ctx.http, "test", ChannelType::Voice, None);
+}
+
+fn do_leave(ctx: &Context, member_count: u8, channel_id: ChannelId, guild_id: GuildId) {
+    if member_count > 0 { return; }
+    let channel = filter_opt_ok!(channel_id.to_channel(&ctx), return);
+    match channel.delete(&ctx) {
+        Ok(_) => return,
+        Err(e) => println!("{}", e)
+    };
+}
+
+fn do_voice(
+    ctx: &Context,
+    voice_state: Option<VoiceState>,
+    fun: &Fn(&Context, u8, ChannelId, GuildId),
+    guild_id: &GuildId
+) {
+    let voice_state = filter_opt!(voice_state, return);
+    let channel_id = filter_opt!(voice_state.channel_id, return);
+    let voice_states = filter_opt!(voice_state_to_voice_states(&voice_state, &ctx), return);
+    let member_count = count_voice_channel_members(&ctx, &voice_states, &channel_id);
+    fun(&ctx, member_count, channel_id, *guild_id);
+}
+
+fn count_voice_channel_members(ctx: &Context, voice_states: &HashMap<UserId, VoiceState>, channel_id: &ChannelId) -> u8 {
+    let mut count = 0;
+    for (user_id, voice_state) in voice_states {
+        let voice_state_channel_id = filter_opt!(&voice_state.channel_id, continue);
+        if channel_id == voice_state_channel_id {
+            count += 1;
+        }
+    }
+    return count;
+}
+
+fn voice_state_to_voice_states(voice_state: &VoiceState, ctx: &Context) -> Option<HashMap<UserId, VoiceState>> {
+    let channel_id = filter_opt!(&voice_state.channel_id, return None);
+    let channel = filter_opt_ok!(channel_id.to_channel(ctx), return None);
+    let guild_lock = filter_opt!(channel.guild(), return None);
+    let guild_lock = filter_opt!(guild_lock.read().guild(&ctx.cache), return None);
+    let voice_states = guild_lock.read().voice_states.clone();
+    return Some(voice_states);
+}
 
 impl EventHandler for Handler {
 
-    fn voice_state_update(&self, ctx: Context, _: Option<GuildId>, _old: Option<VoiceState>, new: VoiceState) {
-        println!("Voice happened");
-        if let Some(old) = &_old {
+    fn voice_state_update(&self, ctx: Context, guild_id: Option<GuildId>, old: Option<VoiceState>, new: VoiceState) {
+        let guild_id = filter_opt!(guild_id, return);
+        if let Some(old) = &old {
             if new.channel_id == old.channel_id {
-                println!("Same channel");
                 return;
-            } else {
             }
         }
-        if _old.is_some() {
-            println!("Is some");
-        }
-
+        do_voice(&ctx, old, &do_leave, &guild_id);
+        do_voice(&ctx, Some(new), &do_join, &guild_id);
     }
-    
+
     fn ready(&self, _: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
     }

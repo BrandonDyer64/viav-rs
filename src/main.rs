@@ -1,10 +1,11 @@
 extern crate serenity;
 
+mod filter_opt;
+mod events;
+
 use std::{ env, thread, time::Duration };
 
 use serenity::prelude::*;
-
-mod events;
 
 use events::Handler;
 
