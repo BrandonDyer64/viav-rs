@@ -23,11 +23,14 @@ fn do_join(ctx: &Context, member_count: u8, channel_id: ChannelId, guild_id: Gui
     let new_channel = filter_opt_ok!(guild_id.create_channel(&ctx.http, &channel_name, ChannelType::Voice, None), return);
 }
 
-fn do_leave(ctx: &Context, member_count: u8, channel_id: ChannelId, guild_id: GuildId) {
-    if member_count > 0 { return; }
-    let channel = filter_opt_ok!(channel_id.to_channel(&ctx), return);
-    if let Err(err) = channel.delete(&ctx) {
-        println!("{}", err);
+fn do_leave(ctx: &Context, member_count: u8, channel_id: ChannelId, guild_id: GuildId) -> Option<()> {
+    if member_count <= 0 {
+        channel_id
+            .to_channel(&ctx)?
+            .delete(&ctx)?;
+        Some(())
+    } else {
+        None
     }
 }
 
@@ -36,23 +39,24 @@ fn do_voice(
     voice_state: Option<VoiceState>,
     fun: &Fn(&Context, u8, ChannelId, GuildId),
     guild_id: &GuildId
-) {
-    let voice_state = filter_opt!(voice_state, return);
-    let channel_id = filter_opt!(voice_state.channel_id, return);
-    let voice_states = filter_opt!(voice_state_to_voice_states(&voice_state, &ctx), return);
+) -> Option<()> {
+    let voice_state = voice_state?;
+    let channel_id = voice_state.channel_id?;
+    let voice_states = voice_state_to_voice_states(&voice_state, &ctx)?;
     let member_count = count_voice_channel_members(&ctx, &voice_states, &channel_id);
     fun(&ctx, member_count, channel_id, *guild_id);
+    Some(())
 }
 
 fn count_voice_channel_members(ctx: &Context, voice_states: &HashMap<UserId, VoiceState>, channel_id: &ChannelId) -> u8 {
     let mut count = 0;
-    for (user_id, voice_state) in voice_states {
-        let voice_state_channel_id = filter_opt!(&voice_state.channel_id, continue);
-        if channel_id == voice_state_channel_id {
-            count += 1;
-        }
+    for (_, voice_state) in voice_states {
+        count += match &voice_state.channel_id {
+            Some(_) => 1,
+            None => 0,
+        };
     }
-    return count;
+    count
 }
 
 fn voice_state_to_voice_states(voice_state: &VoiceState, ctx: &Context) -> Option<HashMap<UserId, VoiceState>> {
