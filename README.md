@@ -1,2 +1,3 @@
 # Viav
-Viav bot
+
+The [Viav](https://viav.app/) Discord bot, rewritten in Rust
