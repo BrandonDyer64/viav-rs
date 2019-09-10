@@ -1,9 +1,9 @@
 extern crate serenity;
 
-mod filter_opt;
 mod events;
+mod filter_opt;
 
-use std::{ env, thread, time::Duration };
+use std::{env, thread, time::Duration};
 
 use serenity::prelude::*;
 
@@ -11,8 +11,7 @@ use events::Handler;
 
 fn main() {
     // Configure the client with your Discord bot token in the environment.
-    let token = env::var("DISCORD_TOKEN")
-        .expect("Expected a token in the environment");
+    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let mut client = Client::new(&token, Handler).expect("Err creating client");
 
@@ -21,21 +20,17 @@ fn main() {
     // loop.
     let manager = client.shard_manager.clone();
 
-    thread::spawn(move || {
-        loop {
-            thread::sleep(Duration::from_secs(30));
+    thread::spawn(move || loop {
+        thread::sleep(Duration::from_secs(30));
 
-            let lock = manager.lock();
-            let shard_runners = lock.runners.lock();
+        let lock = manager.lock();
+        let shard_runners = lock.runners.lock();
 
-            for (id, runner) in shard_runners.iter() {
-                println!(
-                    "Shard ID {} is {} with a latency of {:?}",
-                    id,
-                    runner.stage,
-                    runner.latency,
-                );
-            }
+        for (id, runner) in shard_runners.iter() {
+            println!(
+                "Shard ID {} is {} with a latency of {:?}",
+                id, runner.stage, runner.latency,
+            );
         }
     });
 
